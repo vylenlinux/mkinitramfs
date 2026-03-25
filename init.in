@@ -12,7 +12,7 @@ problem() {
 }
 
 msg() {
-    [ "$verbose" = y  ] || return
+    [ "$verbose" = y ] || return
     echo ":: $*"
 }
 
@@ -33,9 +33,13 @@ move_mount_setup() {
 parse_cmdline() {
     read -r cmdline < /proc/cmdline
 
-    for param in $cmdline ; do
+    for param in $cmdline; do
         case $param in
-            *=*) key=${param%%=*}; value=${param#*=} ;;
+            *=*)
+                key=${param%%=*};
+                value=${param#*=}
+            ;;
+
             '#'*) break ;;
             *) key=$param
         esac
