@@ -4,11 +4,11 @@
 [ "$1" ] || exit 1
 
 case $INITFSCOMP in
-    gzip) compressor="gzip -dc" ;;
     lz4) compressor="lz4 -d -c" ;;
     cat) compressor="cat --" ;;
     xz) compressor="xzcat --" ;;
     zstd) compressor="zstd -d -c" ;;
+    *) compressor="gzip -dc" ;;
 esac
 
 $compressor "$1" | bsdcpio -it
