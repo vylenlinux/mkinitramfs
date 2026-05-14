@@ -133,7 +133,7 @@ add_dir() {
 
     case $path in
         /*) ;;
-        *) return 1;;
+        *) return 1 ;;
     esac
 
     if [ -d "$INITDIR$path" ]; then
