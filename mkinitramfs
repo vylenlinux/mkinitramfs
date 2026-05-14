@@ -2,6 +2,20 @@
 
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
+msg() {
+    [ "$QUIET" ] && return
+    printf ':: %s\n' "$*"
+}
+
+msgerr() {
+    printf 'ERROR: %s\n' "$*" >&2
+}
+
+msgwarn() {
+    [ "$QUIET" ] && return
+    printf 'WARNING: %s\n' "$*" >&2
+}
+
 add_binary() {
     binpath=$(command -v "$1")
 
@@ -240,20 +254,6 @@ add_compression() {
         none) comp="cat" ;;
         *) comp="gzip $complevel_gzip" ;;
     esac
-}
-
-msg() {
-    [ "$QUIET" ] && return
-    printf ':: %s\n' "$*"
-}
-
-msgerr() {
-    printf 'ERROR: %s\n' "$*" >&2
-}
-
-msgwarn() {
-    [ "$QUIET" ] && return
-    printf 'WARNING: %s\n' "$*" >&2
 }
 
 cleanup() {
