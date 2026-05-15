@@ -1,3 +1,2 @@
-*.img
-initrd*
-initramfs*
+/.idea
+/build
