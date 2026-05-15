@@ -15,7 +15,7 @@ subdir('data')
 subdir('hooks')
 subdir('src')
 
-install_data('init.in', install_dir: DATA_DIR)
+install_data('init.in', install_dir: DATA_DIR, install_mode: 'rw-r--r--')
 
 install_emptydir(
     SYSCONFDIR / 'mkinitramfs.d',
