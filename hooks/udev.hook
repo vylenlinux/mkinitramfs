@@ -16,8 +16,8 @@ build_hook() {
 run_earlyhook() {
     udevd --daemon --resolve-names=never
 
-    udevadm trigger --action=add    --type=subsystems
-    udevadm trigger --action=add    --type=devices
+    udevadm trigger --action=add --type=subsystems
+    udevadm trigger --action=add --type=devices
     udevadm trigger --action=change --type=devices
     udevadm settle
 }

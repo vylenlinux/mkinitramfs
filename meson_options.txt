@@ -1,0 +1,2 @@
+option('data_dir',  type: 'string', value: '/usr/share/mkinitramfs')
+option('hooks_dir', type: 'string', value: '/usr/share/mkinitramfs/hooks')

@@ -1,0 +1,5 @@
+install_data('automod.hook', install_dir: HOOKS_DIR)
+install_data('base.hook', install_dir: HOOKS_DIR)
+install_data('encrypt.hook', install_dir: HOOKS_DIR)
+install_data('modules.hook', install_dir: HOOKS_DIR)
+install_data('udev.hook', install_dir: HOOKS_DIR)

@@ -41,7 +41,7 @@ parse_cmdline() {
             ;;
 
             '#'*) break ;;
-            *) key=$param
+            *) key=$param ;;
         esac
 
         case $key in

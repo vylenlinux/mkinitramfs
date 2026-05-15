@@ -42,7 +42,7 @@ run_earlyhook() {
         printf '%s' "$inputvariable" | cryptsetup open --type luks $device vylen - > /dev/null && SUCCESS=1
 
         inputvariable=
-        TRIES=`expr $TRIES + 1`
+        TRIES=$(expr $TRIES + 1)
     done
 
     /sbin/lvm vgchange -ay --sysinit

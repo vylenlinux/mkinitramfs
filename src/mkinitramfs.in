@@ -509,9 +509,9 @@ trap interrupted 1 2 3 15
 
 INITDIR="/tmp/mkinitramfs.$$"
 KERNEL="$(uname -r)"
-INITIN="/usr/share/mkinitramfs/init.in"
-INITRAMFS="initrd-$KERNEL.img"
-CONFIG="/etc/mkinitramfs.conf"
-HOOKDIRS="/usr/share/mkinitramfs/hooks"
+INITIN="@DATA_DIR@/init.in"
+INITRAMFS="initrd-${KERNEL}.img"
+CONFIG="@SYSCONFDIR@/mkinitramfs.conf"
+HOOKDIRS="@HOOKS_DIR@"
 
 main "$@"
