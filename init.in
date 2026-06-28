@@ -1,5 +1,7 @@
 #!/bin/sh
 
+# shellcheck disable=SC2154
+
 export PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
 shell() {
@@ -7,13 +9,13 @@ shell() {
 }
 
 problem() {
-    echo "problem occurs, here's a shell."
+    printf "problem occurs, here's a shell.\n"
     shell
 }
 
-msg() {
-    [ "$verbose" = y ] || return
-    echo ":: $*"
+msg_info() {
+    [ "$verbose" = "y" ] || return
+    printf ":: %s\n" "$1"
 }
 
 mount_setup() {
@@ -34,74 +36,67 @@ parse_cmdline() {
     read -r cmdline < /proc/cmdline
 
     for param in $cmdline; do
-        case $param in
+        case "${param}" in
             *=*)
-                key=${param%%=*};
-                value=${param#*=}
+                key="${param%%=*}"
+                value="${param#*=}"
             ;;
 
             '#'*) break ;;
-            *) key=$param ;;
+            *) key="${param}" ;;
         esac
 
-        case $key in
-            ro | rw) rwopt=$key ;;
+        case "${key}" in
+            ro | rw) rwopt="${key}" ;;
             [![:alpha:]_]* | [[:alpha:]_]*[![:alnum:]_]*) ;;
-            *) eval "$key"=${value:-y} ;;
+            *) eval "${key}=${value:-y}" ;;
         esac
 
         unset key value
     done
 
     case "$root" in
-        /dev/*) device=$root ;;
-
-        UUID=*)
-            eval $root;
-            device="/dev/disk/by-uuid/$UUID"
-        ;;
-
-        LABEL=*)
-            eval $root;
-            device="/dev/disk/by-label/$LABEL"
-        ;;
+        /dev/*) device="$root" ;;
+        UUID=*) device="/dev/disk/by-uuid/${root#UUID=}" ;;
+        LABEL=*) device="/dev/disk/by-label/${root#LABEL=}" ;;
     esac
 }
 
 mount_root() {
-    newroot=$1
+    new_root="$1"
 
-    if [ ! "$device" ]; then
-        echo "device not scpecified!"
+    if [ -z "$device" ]; then
+        printf "device not specified!\n"
         shell
     fi
 
-    if ! mount -n ${rootfstype:+-t $rootfstype} -o ${rwopt:-ro}${rootflags:+,$rootflags} "$device" "$newroot"; then
-        echo "cant mount: $device"
+    mount -n ${rootfstype:+-t $rootfstype} -o "${rwopt:-ro}${rootflags:+,$rootflags}" "$device" "$new_root" || {
+        printf "cant mount: %s\n" "$device"
         shell
-    fi
+    }
 }
 
 run_hook() {
     stage=$1
 
     if [ -f /hook/hook.order ]; then
-        case $stage in
+        case "$stage" in
             cleanup)
-                sed '1!G;h;$!d' /hook/hook.order > /hook/hook.orderreverse;
+                sed '1!G;h;$!d' /hook/hook.order > /hook/hook.orderreverse
                 mv /hook/hook.orderreverse /hook/hook.order
             ;;
         esac
 
         while read -r line; do
-            . /hook/$line
+            # shellcheck source=/hook/$line
+            . "/hook/${line}"
 
-            if [ "$(command -v run_${stage}hook)" ]; then
-                msg "running ${stage}hook: $line"
-                run_${stage}hook
+            if [ "$(command -v "run_${stage}_hook")" ]; then
+                msg_info "running ${stage}_hook: ${line}"
+                "run_${stage}_hook"
             fi
 
-            unset -f run_earlyhook run_latehook run_cleanuphook build_hook
+            unset -f run_early_hook run_late_hook run_cleanup_hook build_hook
         done < /hook/hook.order
     fi
 
@@ -116,25 +111,27 @@ mount_setup
 parse_cmdline
 run_hook early
 
-if [ "$break" = "premount" ] || [ "$break" = "y" ]; then
-    echo "break on pre-mount requested"
-    echo "exit this shell to continue booting"
+breakpoint() {
+    if [ "$break" = "$1" ] || {
+        [ "$2" = "y" ] && [ "$break" = "y" ]
+    }; then
+        printf "break on %s requested\n" "$1"
+        printf "exit this shell to continue booting\n"
 
-    shell
-fi
+        shell
+    fi
+}
 
-$mount_handler /newroot
+breakpoint premount y
+
+"${mount_handler}" /newroot
 run_hook late
 run_hook cleanup
 
-if [ "$break" = "postmount" ]; then
-    echo "break on post-mount requested"
-    echo "exit this shell to continue booting"
-
-    shell
-fi
+breakpoint postmount
 
 move_mount_setup
+# shellcheck disable=SC2093
 exec switch_root /newroot "$init" "$@"
 
 problem

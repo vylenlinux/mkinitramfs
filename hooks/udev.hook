@@ -13,7 +13,7 @@ build_hook() {
     add_binary /lib/udev/scsi_id
 }
 
-run_earlyhook() {
+run_early_hook() {
     udevd --daemon --resolve-names=never
 
     udevadm trigger --action=add --type=subsystems
@@ -22,7 +22,7 @@ run_earlyhook() {
     udevadm settle
 }
 
-run_cleanuphook() {
+run_cleanup_hook() {
     udevadm control --exit
     udevadm info --cleanup-db
 }

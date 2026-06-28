@@ -1,108 +1,111 @@
 #!/bin/sh
 
+# shellcheck disable=SC2317
+
 PATH=/bin:/usr/bin:/sbin:/usr/sbin
 
-msg() {
-    [ "$QUIET" ] && return
-    printf ':: %s\n' "$*"
+msg_info() {
+    [ "$QUIET" = 1 ] && return
+    printf ':: %s\n' "$1"
 }
 
-msgerr() {
-    printf 'ERROR: %s\n' "$*" >&2
+msg_error() {
+    printf 'ERROR: %s\n' "$1" >&2
 }
 
-msgwarn() {
-    [ "$QUIET" ] && return
-    printf 'WARNING: %s\n' "$*" >&2
+msg_warning() {
+    [ "$QUIET" = 1 ] && return
+    printf 'WARNING: %s\n' "$1" >&2
 }
 
 add_binary() {
-    binpath=$(command -v "$1")
+    bin_path=$(command -v "$1")
 
-    if [ -z "$binpath" ]; then
-        msgwarn "missing binary: $1"
+    [ -z "$bin_path" ] && {
+        msg_warning "missing binary: $1"
         return
-    fi
+    }
 
-    add_file "$binpath"
+    add_file "$bin_path"
 
-    if [ -L "$binpath" ]; then
-        add_binary "$(readlink -f "$binpath")"
+    [ -L "$bin_path" ] && {
+        add_binary "$(readlink -f "$bin_path")"
         return
-    fi
+    }
 
-    case "$(file -bi "$binpath")" in
+    case "$(file -bi "$bin_path")" in
         *application/x-sharedlib* | *application/x-executable* | *application/x-pie-executable*)
-            binlib=$(ldd "$binpath" | awk 'NF==4 && $3 ~ /^\// { print $3 }')
+            bin_lib=$(ldd "$bin_path" | awk 'NF==4 && $3 ~ /^\// {print $3;}')
 
-            for lib in $binlib; do
+            for lib in $bin_lib; do
                 add_file "$lib"
             done
         ;;
     esac
 
-    unset binpath binlib
+    unset bin_path bin_lib
 }
 
 add_module() {
-    if modinfo -k "$KERNEL" "$1" >/dev/null 2>&1; then
-        modname=$(modinfo -k "$KERNEL" -F name "$1" | head -n1)
-        modpath=$(modinfo -k "$KERNEL" -F filename "$1" | head -n1)
+    modinfo -k "$KERNEL" "$1" >/dev/null 2>&1 || {
+        msg_info "missing module: $1"
+        return
+    }
 
-        [ -z "$modname" ] && return 0
-        [ -z "$modpath" ] && return 0
-    else
-        msg "missing module: $1"
+    mod_name=$(modinfo -k "$KERNEL" -F name "$1" | head -n1)
+    mod_path=$(modinfo -k "$KERNEL" -F filename "$1" | head -n1)
+
+    [ -z "$mod_name" ] && return 0
+    [ -z "$mod_path" ] && return 0
+
+    if [ -f "$INITDIR/lib/modules/$KERNEL/kernel/${mod_path##*/}" ]; then
         return
     fi
 
-    if [ -f "$INITDIR/lib/modules/$KERNEL/kernel/${modpath##*/}" ]; then
-        return
-    fi
+    add_file "$mod_path" "lib/modules/$KERNEL/kernel/${mod_path##*/}"
 
-    add_file "$modpath" "lib/modules/$KERNEL/kernel/${modpath##*/}"
+    modinfo -F firmware -k "$KERNEL" "$mod_name" | while read -r line; do
+        [ -f "/lib/firmware/$line" ] || {
+            msg_warning "missing firmware for $mod_name: $line"
+            break
+        }
 
-    modinfo -F firmware -k "$KERNEL" "$modname" | while read -r line; do
-        if [ ! -f "/lib/firmware/$line" ]; then
-            msgwarn "missing firmware for $modname: $line"
-        else
-            add_file "/lib/firmware/$line"
-        fi
+        add_file "/lib/firmware/$line"
     done
 
-    for i in $(modinfo -F depends -k "$KERNEL" "$modname" | tr ',' ' '); do
+    for i in $(modinfo -F depends -k "$KERNEL" "$mod_name" | tr ',' ' '); do
         add_module "$i"
     done
 
-    unset modname modpath
+    unset mod_name mod_path
 }
 
 add_file() {
     [ "$1" ] || return
-    src=$1
+    src="$1"
 
-    case $src in
+    case "$src" in
         /*) ;;
 
         *)
-            msgwarn "absolute source path needed: $src";
+            msg_warning "absolute source path needed: $src"
             return
         ;;
     esac
 
-    if [ ! -f "$src" ]; then
-        msgwarn "file not found: $src"
+    [ -f "$src" ] || {
+        msg_warning "file not found: $src"
         return
-    fi
+    }
 
-    if [ -z "$2" ]; then
-        dest="${src#/}"
-    else
+    dest="${src#/}"
+
+    if [ -n "$2" ]; then
         dest="$2"
 
-        case $dest in
+        case "$dest" in
             /*)
-                msgwarn "destination path must without leading '/': $dest"
+                msg_warning "destination path must without leading '/': $dest"
                 unset src dest
 
                 return
@@ -113,7 +116,7 @@ add_file() {
     mode=${3:-$(stat -c %a "$src")}
 
     if [ -z "$mode" ]; then
-        msgwarn "failed get file mode: $src"
+        msg_warning "failed get file mode: $src"
         unset src dest
 
         return
@@ -145,16 +148,16 @@ add_dir() {
 }
 
 add_symlink() {
-    name=$1
-    target=$2
+    name="$1"
+    target="$2"
 
     [ "$name" ] || return 1
 
-    if [ ! "$target" ]; then
+    if [ -z "$target" ]; then
         target=$(readlink -f "$name")
 
-        if [ ! "$target" ]; then
-            msgerr "invalid symlink: $name"
+        if [ -z "$target" ]; then
+            msg_error "invalid symlink: $name"
             return 1
         fi
     fi
@@ -162,7 +165,7 @@ add_symlink() {
     add_dir "${name%/*}"
 
     if [ -L "$INITDIR$name" ]; then
-        msgwarn "overwriting symlink: $name"
+        msg_warning "overwriting symlink: $name"
     fi
 
     ln -sfn "$target" "$INITDIR$name"
@@ -171,11 +174,11 @@ add_symlink() {
 finalize_modules() {
     [ -d "$INITDIR/lib/modules/$KERNEL/kernel" ] || return
 
-    for file in /lib/modules/"$KERNEL"/modules.*; do
+    for file in "/lib/modules/$KERNEL"/modules.*; do
         add_file "$file"
     done
 
-    awk -F'/' '{ print "kernel/" $NF }' "/lib/modules/$KERNEL/modules.order" > "$INITDIR/lib/modules/$KERNEL/modules.order"
+    awk -F'/' '{print "kernel/" $NF;}' "/lib/modules/$KERNEL/modules.order" > "$INITDIR/lib/modules/$KERNEL/modules.order"
     depmod -b "$INITDIR" "$KERNEL"
 }
 
@@ -185,10 +188,10 @@ get_hook_path() {
 
         *)
             for i in $(printf '%s\n' "$HOOKDIRS" | tr ':' ' '); do
-                if [ -f "$i/$1" ]; then
+                [ -f "$i/$1" ] && {
                     printf '%s\n' "$i/$1"
                     break
-                fi
+                }
             done
         ;;
     esac
@@ -197,34 +200,34 @@ get_hook_path() {
 run_build_hook() {
     if [ "$HOOKS" ]; then
         for hook in $HOOKS; do
-            case " $DONEHOOK " in
+            case " $DONE_HOOK " in
                 *" $hook "*) continue ;;
             esac
 
-            hookpath=$(get_hook_path "$hook.hook")
+            hook_path=$(get_hook_path "$hook.hook") || {
+                msg_warning "missing hook: $hook"
+                continue
+            }
 
-            if [ "$hookpath" ]; then
-                . "$hookpath"
+            # shellcheck source=$hook_path
+            . "$hook_path"
 
-                if [ "$(command -v build_hook)" ]; then
-                    msg "running build_hook: $hook"
-                    build_hook
-                fi
+            command -v build_hook >/dev/null 2>&1 && {
+                msg_info "running build_hook: $hook"
+                build_hook
+            }
 
-                printf '%s\n' "$hook" >> "$INITDIR/hook/hook.order"
-                add_file "$hookpath" "hook/$hook" 755
+            printf '%s\n' "$hook" >> "$INITDIR/hook/hook.order"
+            add_file "$hook_path" "hook/$hook" 755
 
-                DONEHOOK="$DONEHOOK $hook"
-                unset hookpath build_hook
-            else
-                msgwarn "missing hook: $hook"
-            fi
+            DONE_HOOK="$DONE_HOOK $hook"
+            unset hook_path build_hook
         done
     fi
 }
 
 cmd_exists() {
-    command -v "$1" >/dev/null 2>&1 || msgerr "command '$1' is not available."
+    command -v "$1" >/dev/null 2>&1 || msg_error "command '$1' is not available."
 }
 
 add_compression() {
@@ -233,21 +236,21 @@ add_compression() {
     complevel_zstd="${complevel_zstd:--19}"
     complevel_lz4="${complevel_lz4:--12}"
 
-    case "$INITFSCOMP" in
+    case "$INIT_FS_COMP" in
         gzip) comp="$(command -v gzip 2>/dev/null || printf 'gzip') $complevel_gzip" ;;
 
         xz)
-            cmd_exists xz;
+            cmd_exists xz
             comp="xz -C crc32 -T0 $complevel_xz"
         ;;
 
         zstd)
-            cmd_exists zstd;
+            cmd_exists zstd
             comp="zstd -T0 $complevel_zstd"
         ;;
 
         lz4)
-            cmd_exists lz4;
+            cmd_exists lz4
             comp="lz4 --favor-decSpeed -lz $complevel_lz4"
         ;;
 
@@ -268,17 +271,17 @@ interrupted() {
 usage() {
     cat <<EOF
 Usage:
-  $(basename "$0") [option] [argument]
+  $(basename "${0}") [option] [argument]
 
 Options:
-  -k <version>     custom kernel version (default: $KERNEL)
-  -o <output>      custom output name (default: $INITRAMFS)
-  -i <init>        custom init file (default: $INITIN)
+  -k <version>     custom kernel version (default: ${KERNEL})
+  -o <output>      custom output name (default: ${INITRAMFS})
+  -i <init>        custom init file (default: ${INIT_IN})
   -m <modules>     add extra modules (comma separated)
   -b <binaries>    add extra binary (comma separated)
   -f <file>        add extra file (comma separated & absolute path)
-  -c <config>      use custom config (default: $CONFIG)
-  -C <compression> (gzip|xz|zstd|lz4|none  default: $INITFSCOMP)
+  -c <config>      use custom config (default: ${CONFIG})
+  -C <compression> (gzip | xz | zstd | lz4 | none; default: ${INIT_FS_COMP})
   -A <hook>        add extra hook (comma separated, precedence over -a, -s & HOOKS)
   -a <hook>        add extra hook (comma separated, precedence over -s & after HOOKS)
   -s <hook>        skip hook defined in HOOKS (comma separated)
@@ -288,89 +291,89 @@ Options:
 EOF
 }
 
-needarg() {
-    if [ ! "$1" ]; then
+need_arg() {
+    [ -z "$1" ] && {
         printf 'ERROR: argument is needed for this option!\n' >&2
         exit 1
-    fi
+    }
 }
 
 parse_opt() {
     while [ "$1" ]; do
         case $1 in
             -k)
-                needarg "$2";
-                KERNEL=$2;
+                need_arg "$2"
+                KERNEL="$2"
 
                 shift
             ;;
 
             -o)
-                needarg "$2";
-                OUTPUT=$2;
+                need_arg "$2"
+                OUTPUT="$2"
 
                 shift
             ;;
 
             -i)
-                needarg "$2";
-                INITIN=$2;
+                need_arg "$2"
+                INIT_IN="$2"
 
                 shift
             ;;
 
             -c)
-                needarg "$2";
-                CONFIG=$2;
+                need_arg "$2"
+                CONFIG="$2"
 
                 shift
             ;;
 
             -C)
-                needarg "$2";
-                INITFSCOMP=$2;
+                need_arg "$2"
+                INIT_FS_COMP="$2"
 
                 shift
             ;;
 
             -A)
-                needarg "$2";
-                ADDEARLYHOOKS=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                ADD_EARLY_HOOKS=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
 
             -a)
-                needarg "$2";
-                ADDHOOKS=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                ADD_HOOKS=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
 
             -s)
-                needarg "$2";
-                SKIPHOOKS=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                SKIP_HOOKS=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
 
             -m)
-                needarg "$2";
-                ADDMODULES=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                ADD_MODULES=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
 
             -b)
-                needarg "$2";
-                ADDBINARIES=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                ADD_BINARIES=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
 
             -f)
-                needarg "$2";
-                ADDFILES=$(printf '%s\n' "$2" | tr ',' ' ');
+                need_arg "$2"
+                ADD_FILES=$(printf '%s\n' "$2" | tr ',' ' ')
 
                 shift
             ;;
@@ -378,12 +381,12 @@ parse_opt() {
             -q) QUIET=1 ;;
 
             -h)
-                usage;
+                usage
                 exit 0
             ;;
 
             *)
-                printf 'ERROR: invalid option %s\n' "'$1'" >&2;
+                printf 'ERROR: invalid option %s\n' "'$1'" >&2
                 exit 1
             ;;
         esac
@@ -395,41 +398,42 @@ parse_opt() {
 main() {
     parse_opt "$@"
 
-    if [ "$(id -u)" != "0" ]; then
-        msgerr "need root access!"
+    [ "$(id -u)" -ne 0 ] && {
+        msg_error "need root access!"
+        exit 1
+    }
+
+    CPIO=$(command -v bsdcpio || command -v cpio)
+
+    if [ -z "$CPIO" ]; then
+        msg_error "neither 'bsdcpio' or 'cpio' found, exiting..."
         exit 1
     fi
 
-    CPIO=$(command -v bsdcpio) || CPIO=$(command -v cpio)
-
-    if [ ! "$CPIO" ]; then
-        msgerr "neither 'bsdcpio' or 'cpio' found, exiting..."
+    [ -f "$CONFIG" ] || {
+        msg_error "config file '$CONFIG' does not exist."
         exit 1
-    fi
+    }
 
-    if [ -f "$CONFIG" ]; then
-        . "$CONFIG"
-    else
-        msgerr "config file '$CONFIG' does not exist."
-        exit 1
-    fi
+    # shellcheck source=$CONFIG
+    . "$CONFIG"
 
-    if [ ! -d "/lib/modules/$KERNEL" ]; then
-        msgerr "kernel directory '/lib/modules/$KERNEL' does not exist."
+    [ -d "/lib/modules/$KERNEL" ] || {
+        msg_error "kernel directory '/lib/modules/$KERNEL' does not exist."
         exit 1
-    fi
+    }
 
-    if [ ! -f "$INITIN" ]; then
-        msgerr "init file '$INITIN' does not exist."
+    [ -f "$INIT_IN" ] || {
+        msg_error "init file '$INIT_IN' does not exist."
         exit 1
-    fi
+    }
 
     if [ "$OUTPUT" ]; then
         if [ "$(basename "$OUTPUT")" != "$OUTPUT" ] && [ ! -d "$(dirname "$OUTPUT")" ]; then
-            msgerr "directory '$(dirname "$OUTPUT")' for output '$(basename "$OUTPUT")' does not exist."
+            msg_error "directory '$(dirname "$OUTPUT")' for output '$(basename "$OUTPUT")' does not exist."
             exit 1
         elif [ -d "$OUTPUT" ]; then
-            msgerr "'$OUTPUT' is a directory."
+            msg_error "'$OUTPUT' is a directory."
             exit 1
         fi
 
@@ -437,35 +441,30 @@ main() {
     fi
 
     # filter out skip hooks (-s)
-    if [ "$SKIPHOOKS" ] && [ "$HOOKS" ]; then
+    if [ "$SKIP_HOOKS" ] && [ "$HOOKS" ]; then
         for h in $HOOKS; do
-            printf '%s\n' "$SKIPHOOKS" | tr ' ' '\n' | grep -qx "$h" || NEWHOOKS="$NEWHOOKS $h"
+            printf '%s\n' "$SKIP_HOOKS" | tr ' ' '\n' | grep -qx "$h" || NEWHOOKS="$NEWHOOKS $h"
         done
 
         HOOKS=$NEWHOOKS
         unset NEWHOOKS
     fi
 
-    # add extra hooks (-a)
-    [ "$ADDHOOKS" ] && HOOKS="$HOOKS $ADDHOOKS"
+    [ "$ADD_HOOKS" ] && HOOKS="$HOOKS $ADD_HOOKS"
+    [ "$ADD_EARLY_HOOKS" ] && HOOKS="$HOOKS $ADD_EARLY_HOOKS"
+    [ "$ADD_MODULES" ] && MODULES="$MODULES $ADD_MODULES"
+    [ "$ADD_FILES" ] && FILES="$FILES $ADD_FILES"
+    [ "$ADD_BINARIES" ] && BINARIES="$BINARIES $ADD_BINARIES"
 
-    # add extra early hooks (-A)
-    [ "$ADDEARLYHOOKS" ] && HOOKS="$ADDEARLYHOOKS $HOOKS"
-
-    # add extra modules/files/binaries
-    [ "$ADDMODULES" ] && MODULES="$MODULES $ADDMODULES"
-    [ "$ADDFILES" ] && FILES="$FILES $ADDFILES"
-    [ "$ADDBINARIES" ] && BINARIES="$BINARIES $ADDBINARIES"
-
-    [ "$QUIET" ] || printf 'Generating initramfs...\n'
+    [ "$QUIET" != 1 ] && printf 'Generating initramfs...\n'
 
     mkdir -p "$INITDIR/hook" "$INITDIR/newroot"
-    install -m0755 "$INITIN" "$INITDIR/init"
+    install -m755 "$INIT_IN" "$INITDIR/init"
 
     run_build_hook
 
     if [ "$BINARIES" ]; then
-        msg "adding extra binaries..."
+        msg_info "adding extra binaries..."
 
         for b in $BINARIES; do
             add_binary "$b"
@@ -473,7 +472,7 @@ main() {
     fi
 
     if [ "$MODULES" ]; then
-        msg "adding extra modules..."
+        msg_info "adding extra modules..."
 
         for m in $MODULES; do
             add_module "$m"
@@ -481,7 +480,7 @@ main() {
     fi
 
     if [ "$FILES" ]; then
-        msg "adding extra files..."
+        msg_info "adding extra files..."
 
         for f in $FILES; do
             add_file "$f"
@@ -491,16 +490,16 @@ main() {
     add_compression
     finalize_modules
 
-    msg "generating initramfs image..."
+    msg_info "generating initramfs image..."
     rm -f "$INITRAMFS"
 
     (
-        cd "$INITDIR" || exit 1;
+        cd "$INITDIR" || exit 1
         find . | LANG=C "$CPIO" -o -H newc --quiet | $comp
     ) > "$INITRAMFS"
 
     cleanup
-    [ "$QUIET" ] || printf 'Done: %s (%s)\n' "$INITRAMFS" "$(du -h "$INITRAMFS" | awk '{print $1}')"
+    [ "$QUIET" != 1 ] && printf 'Done: %s (%s)\n' "$INITRAMFS" "$(du -h "$INITRAMFS" | awk '{print $1;}')"
 
     exit 0
 }
@@ -509,7 +508,7 @@ trap interrupted 1 2 3 15
 
 INITDIR="/tmp/mkinitramfs.$$"
 KERNEL="$(uname -r)"
-INITIN="@DATA_DIR@/init.in"
+INIT_IN="@DATA_DIR@/init.in"
 INITRAMFS="initrd-${KERNEL}.img"
 CONFIG="@SYSCONFDIR@/mkinitramfs.conf"
 HOOKDIRS="@HOOKS_DIR@"

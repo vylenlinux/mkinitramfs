@@ -21,7 +21,7 @@ build_hook() {
     add_file /usr/lib/libgcc_s.so
 }
 
-run_earlyhook() {
+run_early_hook() {
     modprobe dm_mod
     sleep 2
 
