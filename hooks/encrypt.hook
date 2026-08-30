@@ -4,7 +4,6 @@ build_hook() {
     add_binary cryptsetup
     add_binary dmsetup
     add_binary lvm
-
     add_binary stty
     add_binary expr
 
@@ -32,17 +31,16 @@ run_early_hook() {
     while [ "$TRIES" -lt 3 ] && [ "$SUCCESS" -eq 0 ]; do
         printf 'Enter passphrase for %s: ' "$device"
 
-        stty_orig=$(stty -F $CONSOLE -g)
-        stty -F $CONSOLE -echo
+        stty_orig="$(stty -F $CONSOLE -g)"
+        stty -F "${CONSOLE}" -echo
 
-        read inputvariable <> $CONSOLE
-        stty -F $CONSOLE $stty_orig
+        read -r input_variable <> "${CONSOLE}"
+        stty -F "${CONSOLE}" "${stty_orig}"
 
-        echo
-        printf '%s' "$inputvariable" | cryptsetup open --type luks $device vylen - > /dev/null && SUCCESS=1
+        printf '\n%s' "$input_variable" | cryptsetup open --type luks "${device}" vylen - > /dev/null && SUCCESS=1
 
-        inputvariable=
-        TRIES=$(expr $TRIES + 1)
+        input_variable=
+        TRIES=$((TRIES + 1))
     done
 
     /sbin/lvm vgchange -ay --sysinit

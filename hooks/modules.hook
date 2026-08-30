@@ -18,11 +18,13 @@ build_hook() {
         kernel/drivers/usb/storage"
 
     for mod in $REQMODULES; do
-        FTGT="$FTGT /lib/modules/$KERNEL/$mod"
+        FTGT="${FTGT} /lib/modules/${KERNEL}/${mod}"
     done
 
-    for modules in $(find $FTGT -type f -name "*.ko*" 2> /dev/null); do
-        modules=$(echo ${modules%*.ko*})
-        add_module ${modules##*/}
+    # shellcheck disable=SC2044
+    # shellcheck disable=SC2086
+    for module in $(find $FTGT -type f -name "*.ko*" 2> /dev/null); do
+        module="$(printf "%s" "${module%*.ko*}")"
+        add_module "${module##*/}"
     done
 }

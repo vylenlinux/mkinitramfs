@@ -14,10 +14,6 @@ conf_data.set('HOOKS_DIR', HOOKS_DIR)
 subdir('data')
 subdir('hooks')
 subdir('src')
+subdir('man')
 
 install_data('init.in', install_dir: DATA_DIR, install_mode: 'rw-r--r--')
-
-install_emptydir(
-    SYSCONFDIR / 'mkinitramfs.d',
-    install_mode: 'rwxr-xr-x'
-)

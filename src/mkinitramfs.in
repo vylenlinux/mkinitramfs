@@ -237,8 +237,6 @@ add_compression() {
     complevel_lz4="${complevel_lz4:--12}"
 
     case "$INIT_FS_COMP" in
-        gzip) comp="$(command -v gzip 2>/dev/null || printf 'gzip') $complevel_gzip" ;;
-
         xz)
             cmd_exists xz
             comp="xz -C crc32 -T0 $complevel_xz"
@@ -271,29 +269,28 @@ interrupted() {
 usage() {
     cat <<EOF
 Usage:
-  $(basename "${0}") [option] [argument]
+    ${0##*/} [option] [argument]
 
 Options:
-  -k <version>     custom kernel version (default: ${KERNEL})
-  -o <output>      custom output name (default: ${INITRAMFS})
-  -i <init>        custom init file (default: ${INIT_IN})
-  -m <modules>     add extra modules (comma separated)
-  -b <binaries>    add extra binary (comma separated)
-  -f <file>        add extra file (comma separated & absolute path)
-  -c <config>      use custom config (default: ${CONFIG})
-  -C <compression> (gzip | xz | zstd | lz4 | none; default: ${INIT_FS_COMP})
-  -A <hook>        add extra hook (comma separated, precedence over -a, -s & HOOKS)
-  -a <hook>        add extra hook (comma separated, precedence over -s & after HOOKS)
-  -s <hook>        skip hook defined in HOOKS (comma separated)
-  -q               quiet mode
-  -h               print this help msg
-
+    -k <version>      custom kernel version (default: ${KERNEL})
+    -o <output>       custom output name (default: ${INITRAMFS})
+    -i <init>         custom init file (default: ${INIT_IN})
+    -m <modules>      add extra modules (comma separated)
+    -b <binaries>     add extra binary (comma separated)
+    -f <file>         add extra file (comma separated & absolute path)
+    -c <config>       use custom config (default: ${CONFIG})
+    -C <compression>  (gzip | xz | zstd | lz4 | none; default: ${INIT_FS_COMP})
+    -A <hook>         add extra hook (comma separated, precedence over -a, -s & HOOKS)
+    -a <hook>         add extra hook (comma separated, precedence over -s & after HOOKS)
+    -s <hook>         skip hook defined in HOOKS (comma separated)
+    -q                quiet mode
+    -h                print this help msg
 EOF
 }
 
 need_arg() {
     [ -z "$1" ] && {
-        printf 'ERROR: argument is needed for this option!\n' >&2
+        msg_error 'argument is needed for this option!'
         exit 1
     }
 }
@@ -386,7 +383,7 @@ parse_opt() {
             ;;
 
             *)
-                printf 'ERROR: invalid option %s\n' "'$1'" >&2
+                msg_error "invalid option '$1'"
                 exit 1
             ;;
         esac
@@ -428,11 +425,13 @@ main() {
         exit 1
     }
 
-    if [ "$OUTPUT" ]; then
-        if [ "$(basename "$OUTPUT")" != "$OUTPUT" ] && [ ! -d "$(dirname "$OUTPUT")" ]; then
-            msg_error "directory '$(dirname "$OUTPUT")' for output '$(basename "$OUTPUT")' does not exist."
+    if [ -n "$OUTPUT" ]; then
+        if [ "${OUTPUT##*/}" != "$OUTPUT" ] && [ ! -d "$(dirname "$OUTPUT")" ]; then
+            msg_error "directory '$(dirname "$OUTPUT")' for output '${OUTPUT##*/}' does not exist."
             exit 1
-        elif [ -d "$OUTPUT" ]; then
+        fi
+
+        if [ -d "$OUTPUT" ]; then
             msg_error "'$OUTPUT' is a directory."
             exit 1
         fi
@@ -441,7 +440,7 @@ main() {
     fi
 
     # filter out skip hooks (-s)
-    if [ "$SKIP_HOOKS" ] && [ "$HOOKS" ]; then
+    if [ -n "$SKIP_HOOKS" ] && [ -n "$HOOKS" ]; then
         for h in $HOOKS; do
             printf '%s\n' "$SKIP_HOOKS" | tr ' ' '\n' | grep -qx "$h" || NEWHOOKS="$NEWHOOKS $h"
         done
@@ -450,11 +449,11 @@ main() {
         unset NEWHOOKS
     fi
 
-    [ "$ADD_HOOKS" ] && HOOKS="$HOOKS $ADD_HOOKS"
-    [ "$ADD_EARLY_HOOKS" ] && HOOKS="$HOOKS $ADD_EARLY_HOOKS"
-    [ "$ADD_MODULES" ] && MODULES="$MODULES $ADD_MODULES"
-    [ "$ADD_FILES" ] && FILES="$FILES $ADD_FILES"
-    [ "$ADD_BINARIES" ] && BINARIES="$BINARIES $ADD_BINARIES"
+    [ -z "$ADD_HOOKS" ] || HOOKS="$HOOKS $ADD_HOOKS"
+    [ -z "$ADD_EARLY_HOOKS" ] || HOOKS="$HOOKS $ADD_EARLY_HOOKS"
+    [ -z "$ADD_MODULES" ] || MODULES="$MODULES $ADD_MODULES"
+    [ -z "$ADD_FILES" ] || FILES="$FILES $ADD_FILES"
+    [ -z "$ADD_BINARIES" ] || BINARIES="$BINARIES $ADD_BINARIES"
 
     [ "$QUIET" != 1 ] && printf 'Generating initramfs...\n'
 
@@ -463,7 +462,7 @@ main() {
 
     run_build_hook
 
-    if [ "$BINARIES" ]; then
+    if [ -n "$BINARIES" ]; then
         msg_info "adding extra binaries..."
 
         for b in $BINARIES; do
@@ -471,7 +470,7 @@ main() {
         done
     fi
 
-    if [ "$MODULES" ]; then
+    if [ -n "$MODULES" ]; then
         msg_info "adding extra modules..."
 
         for m in $MODULES; do
@@ -479,7 +478,7 @@ main() {
         done
     fi
 
-    if [ "$FILES" ]; then
+    if [ -n "$FILES" ]; then
         msg_info "adding extra files..."
 
         for f in $FILES; do

@@ -1,0 +1,31 @@
+.TH LSMKINITRAMFS 1 "2026-07-15" "mkinitramfs" "User Commands"
+.SH NAME
+lsmkinitramfs \- list the contents of an initramfs image
+.SH SYNOPSIS
+.B lsmkinitramfs
+.I image
+.SH DESCRIPTION
+\fBlsmkinitramfs\fP decompresses the given initramfs \fIimage\fP and lists
+its contents in \fBcpio\fP verbose-table format (equivalent to
+\fBcpio \-it\fP).
+.PP
+The compression format is detected from \fBINITFSCOMP\fP in
+\fI/etc/mkinitramfs.conf\fP.  If the config file is absent or
+\fBINITFSCOMP\fP is unset, \fBgzip\fP is assumed.
+.PP
+The tool uses \fBbsdcpio\fP(1) for listing, which must be installed.
+.SH EXIT STATUS
+.TP
+0
+Success.
+.TP
+1
+No image argument provided, or the image could not be read.
+.SH FILES
+.TP
+\fI/etc/mkinitramfs.conf\fP
+Read to determine the compression format (\fBINITFSCOMP\fP).
+.SH SEE ALSO
+\fBmkinitramfs\fP(8),
+\fBmkinitramfs.conf\fP(5),
+\fBbsdcpio\fP(1)

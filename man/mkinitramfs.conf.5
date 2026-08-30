@@ -1,0 +1,58 @@
+.TH MKINITRAMFS.CONF 5 "2026-07-15" "mkinitramfs" "File Formats"
+.SH NAME
+mkinitramfs.conf \- configuration file for mkinitramfs
+.SH DESCRIPTION
+\fBmkinitramfs.conf\fP is sourced as a shell script by \fBmkinitramfs\fP(8)
+at the start of image generation.  It defines the default compression,
+hooks, and optional extra files, binaries, and kernel modules to include.
+.PP
+The file is read from \fI/etc/mkinitramfs.conf\fP by default; a different
+path may be specified with \fBmkinitramfs \-c\fP.
+.SH VARIABLES
+.TP
+\fBINITFSCOMP\fP
+Compression format for the output image.  Supported values:
+\fBgzip\fP (default), \fBxz\fP, \fBzstd\fP, \fBlz4\fP, \fBnone\fP.
+Can be overridden at runtime with \fBmkinitramfs \-C\fP.
+.TP
+\fBHOOKS\fP
+Space-separated list of hooks to run, in order.  Each name resolves to a
+\&\fI.hook\fP file under \fBHOOKDIRS\fP (default:
+\&\fI/usr/share/mkinitramfs/hooks\fP).
+.br
+Example: \fBHOOKS="base modules udev"\fP
+.br
+Can be modified at runtime with \fB\-A\fP (prepend), \fB\-a\fP (append),
+and \fB\-s\fP (skip).
+.TP
+\fBBINARIES\fP
+Space-separated list of extra binaries to include.  Each is resolved via
+\fBPATH\fP and its shared library dependencies are pulled in automatically.
+.TP
+\fBMODULES\fP
+Space-separated list of extra kernel modules to include.  Dependencies
+and firmware are resolved recursively via \fBmodinfo\fP(8).
+.TP
+\fBFILES\fP
+Space-separated list of extra files to include.  Paths must be absolute.
+.TP
+\fBINITRAMFS\fP
+Output path for the generated image.  If unset, defaults to
+\&\fIinitrd\-\fP\fIversion\fP\fI.img\fP in the current directory.
+Can be overridden at runtime with \fBmkinitramfs \-o\fP.
+.SH EXAMPLE
+.nf
+# Use gzip compression
+INITFSCOMP="gzip"
+
+# No extra binaries, modules, or files by default
+BINARIES=""
+MODULES=""
+FILES=""
+
+# Hooks to run: base layout, kernel modules, udev
+HOOKS="base modules udev"
+.fi
+.SH SEE ALSO
+\fBmkinitramfs\fP(8),
+\fBlsmkinitramfs\fP(1)

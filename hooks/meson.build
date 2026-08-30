@@ -1,11 +1,11 @@
 hooks = [
-    'automod.hook',
-    'base.hook',
-    'encrypt.hook',
-    'modules.hook',
-    'udev.hook'
+    'automod',
+    'base',
+    'encrypt',
+    'modules',
+    'udev'
 ]
 
 foreach h: hooks
-    install_data(h, install_dir: HOOKS_DIR, install_mode: 'rw-r--r--')
+    install_data('@0@.hook'.format(h), install_dir: HOOKS_DIR, install_mode: 'rw-r--r--')
 endforeach

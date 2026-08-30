@@ -1,0 +1,194 @@
+.TH MKINITRAMFS 8 "2026-07-15" "mkinitramfs" "System Administration"
+.SH NAME
+mkinitramfs \- generate an initramfs image for Linux systems and LiveCDs
+.SH SYNOPSIS
+.B mkinitramfs
+[\fIoption\fR [\fIargument\fR]] ...
+.SH DESCRIPTION
+\fBmkinitramfs\fP generates an initial RAM filesystem (initramfs) image
+containing the files, kernel modules, and binaries needed to boot a Linux
+system.  It is inspired by Arch Linux's \fBmkinitcpio\fP but is intentionally
+simpler.
+.PP
+The script builds the image in a temporary directory, runs a series of
+build hooks to populate it, then archives the result with \fBcpio\fP(1)
+and compresses it.  The generated image is an archive that the kernel
+decompresses into a \fBtmpfs\fP at boot time; the \fBinit\fP script inside
+then mounts the real root filesystem and hands off execution via
+\fBswitch_root\fP(8).
+.PP
+Must be run as root.
+.SH OPTIONS
+.TP
+\fB\-k\fR \fIversion\fR
+Use a custom kernel version instead of the running kernel
+(default: output of \fBuname \-r\fP).
+The corresponding directory \fI/lib/modules/\fP\fIversion\fP must exist.
+.TP
+\fB\-o\fR \fIoutput\fR
+Write the resulting image to \fIoutput\fR instead of the default
+\fIinitrd\-\fP\fIversion\fP\fI.img\fP in the current directory.
+.TP
+\fB\-i\fR \fIinit\fR
+Use a custom init script instead of the default
+\fI/usr/share/mkinitramfs/init.in\fP.
+.TP
+\fB\-c\fR \fIconfig\fR
+Use a custom configuration file instead of \fI/etc/mkinitramfs.conf\fP.
+.TP
+\fB\-C\fR \fIcompression\fR
+Compression format for the output image.  Supported values:
+.RS
+.TP
+\fBgzip\fP
+gzip compression (default).
+.TP
+\fBxz\fP
+xz compression; \fBxz\fP(1) must be installed.
+.TP
+\fBzstd\fP
+zstd compression; \fBzstd\fP(1) must be installed.
+.TP
+\fBlz4\fP
+lz4 compression; \fBlz4\fP(1) must be installed.
+.TP
+\fBnone\fP
+No compression; output is a plain cpio archive.
+.RE
+.TP
+\fB\-m\fR \fImodules\fR
+Comma-separated list of extra kernel modules to include.
+Each module name is passed to \fBmodinfo\fP(8) for resolution; dependencies
+and firmware are pulled in recursively.
+.TP
+\fB\-b\fR \fIbinaries\fR
+Comma-separated list of extra binaries to include.  Each binary is resolved
+via \fBPATH\fP, and its shared library dependencies (found with \fBldd\fP(1))
+are included automatically.  Symlinks are followed.
+.TP
+\fB\-f\fR \fIfiles\fR
+Comma-separated list of extra files to include.  Paths must be absolute.
+.TP
+\fB\-A\fR \fIhooks\fR
+Comma-separated list of hooks to add \fBbefore\fP the hooks defined in
+\fBHOOKS\fP.  These run earliest and take precedence over \fB\-a\fP, \fB\-s\fP,
+and the configured \fBHOOKS\fP.
+.TP
+\fB\-a\fR \fIhooks\fR
+Comma-separated list of hooks to add \fBafter\fP the hooks defined in
+\fBHOOKS\fP (but after any hooks skipped by \fB\-s\fP).
+.TP
+\fB\-s\fR \fIhooks\fR
+Comma-separated list of hooks to skip (remove from \fBHOOKS\fP before
+adding \fB\-a\fP or \fB\-A\fP hooks).
+.TP
+\fB\-q\fR
+Quiet mode.  Suppresses informational messages and non-fatal warnings.
+Errors (\fBmsgerr\fP) are always printed.
+.TP
+\fB\-h\fR
+Print a brief usage summary and exit.
+.SH HOOKS
+Hooks are the primary extension mechanism.  Each hook is a shell script
+that is sourced twice:
+.IP \(bu 2
+At \fBbuild time\fP, to populate the initramfs with files, binaries, and
+kernel modules via helper functions.
+.IP \(bu
+At \fBboot time\fP (inside the initramfs), to perform early userspace tasks
+such as device discovery, decryption, or udev startup.
+.PP
+A hook file may define any of these functions:
+.TP
+\fBbuild_hook()\fP
+Called during image generation.  Uses the \fBadd_binary\fP, \fBadd_module\fP,
+\fBadd_file\fP, \fBadd_dir\fP, and \fBadd_symlink\fP helpers to populate the
+initramfs tree.
+.TP
+\fBrun_early_hook()\fP
+Called inside the initramfs before the root filesystem is mounted.
+Used for device discovery, LUKS unlocking, starting \fBudevd\fP, etc.
+.TP
+\fBrun_late_hook()\fP
+Called inside the initramfs after the root filesystem is mounted.
+.TP
+\fBrun_cleanup_hook()\fP
+Called inside the initramfs after late hooks, in reverse hook order.
+Used for teardown (e.g., stopping udevd, cleaning up device nodes).
+.PP
+Hooks can also override the \fBmount_handler\fP variable with the
+name of a function that mounts the root filesystem, replacing the
+default \fBmount_root\fP behavior (used by \fBliveiso\fP for overlayfs mounts).
+.SS Hook resolution
+A hook name is resolved by searching \fBHOOKDIRS\fP
+(default: \fI/usr/share/mkinitramfs/hooks\fP, colon-separated) for
+a file named \fIname\fP\fB.hook\fP.  Absolute paths may also be used directly
+(via \fB\-A\fP or \fB\-a\fP).
+.SS Standard hooks
+.TP
+\fBautomod\fP
+Auto-includes kernel modules for all currently loaded modules (reads
+\fI/sys/module/\fP).
+\fBbase\fP
+Creates the essential directory layout (\fI/bin\fP, \fI/dev\fP, \fI/proc\fP,
+\fI/sys\fP, \fI/run\fP, \fI/usr\fP, \fI/etc\fP), standard symlinks
+(\fI/lib64\fP \(-> \fIlib\fP, \fI/sbin\fP \(-> \fIbin\fP, etc.), and core
+binaries (shell, mount, \fBswitch_root\fP, \fBmodprobe\fP, \fBblkid\fP, \fBsed\fP,
+\fBgrep\fP, \fBawk\fP, etc.).
+.TP
+\fBencrypt\fP
+Adds LUKS encryption support: \fBcryptsetup\fP(8), \fBdmsetup\fP(8),
+\fBlvm\fP(8), and the \fBdm_mod\fP kernel module.  At early boot prompts
+for a passphrase and unlocks the LUKS device, then activates LVM volume
+groups.
+.TP
+\fBmodules\fP
+Includes kernel modules from common driver categories (block, SCSI, ATA,
+USB storage, virtio, filesystems, crypto, etc.).
+.TP
+\fBudev\fP
+Includes \fBudevd\fP(8) and \fBudevadm\fP(8), standard udev rules, and
+\fBata_id\fP / \fBscsi_id\fP helpers.  Starts udevd at early boot and stops
+it during cleanup.
+.SH FILES
+.TP
+\fI/etc/mkinitramfs.conf\fP
+Default configuration file.  Defines compression format, default hooks,
+and optional extra binaries, modules, and files.  See
+\fBmkinitramfs.conf\fP(5).
+.TP
+\fI/usr/share/mkinitramfs/init.in\fP
+Default init script placed at \fI/init\fP inside the image.
+.TP
+\fI/usr/share/mkinitramfs/hooks/\fP
+Default hook directory.
+.TP
+\fI/tmp/mkinitramfs.\fP\fI$$\fP
+Temporary build directory, cleaned up on exit.
+.SH ENVIRONMENT
+The script sets \fBPATH\fP to \fI/bin:/usr/bin:/sbin:/usr/sbin\fP internally.
+.SH EXIT STATUS
+.TP
+0
+Success.
+.TP
+1
+An error occurred (missing prerequisites, invalid arguments, etc.).
+.SH NOTES
+The script aims for POSIX shell compliance.  Do not introduce bashisms.
+.PP
+Destination paths passed to \fBadd_file\fP inside hooks must \fBnot\fP have a
+leading slash \(em they are relative to the initramfs root.
+.PP
+Hook ordering in \fBHOOKS\fP determines both build-time and boot-time
+execution order.  Cleanup hooks run in reverse order.
+.SH SEE ALSO
+\fBlsmkinitramfs\fP(1),
+\fBmkinitramfs.conf\fP(5),
+\fBcpio\fP(1),
+\fBgzip\fP(1),
+\fBbsdcpio\fP(1),
+\fBswitch_root\fP(8),
+\fBdepmod\fP(8),
+\fBmodinfo\fP(8),
+\fBinitrd\fP(4)
