@@ -21,21 +21,23 @@ msg_warning() {
 add_binary() {
     bin_path=$(command -v "$1")
 
-    [ -z "$bin_path" ] && {
+    if [ -z "$bin_path" ]; then
         msg_warning "missing binary: $1"
         return
-    }
+    fi
 
     add_file "$bin_path"
 
-    [ -L "$bin_path" ] && {
+    if [ -L "$bin_path" ]; then
         add_binary "$(readlink -f "$bin_path")"
         return
-    }
+    fi
 
     case "$(file -bi "$bin_path")" in
         *application/x-sharedlib* | *application/x-executable* | *application/x-pie-executable*)
-            bin_lib=$(ldd "$bin_path" | awk 'NF==4 && $3 ~ /^\// {print $3;}')
+            bin_lib=$(ldd "$bin_path" | awk 'NF == 4 && $3 ~ /^\// {
+                print $3;
+            }')
 
             for lib in $bin_lib; do
                 add_file "$lib"
@@ -113,7 +115,7 @@ add_file() {
         esac
     fi
 
-    mode=${3:-$(stat -c %a "$src")}
+    mode="${3:-$(stat -c %a "$src")}"
 
     if [ -z "$mode" ]; then
         msg_warning "failed get file mode: $src"
@@ -127,14 +129,14 @@ add_file() {
 }
 
 add_dir() {
-    path=$1
-    mode=${2:-755}
+    path="$1"
+    mode="${2:-755}"
 
     if [ -z "$path" ]; then
         return 1
     fi
 
-    case $path in
+    case "$path" in
         /*) ;;
         *) return 1 ;;
     esac
@@ -188,10 +190,10 @@ get_hook_path() {
 
         *)
             for i in $(printf '%s\n' "$HOOKDIRS" | tr ':' ' '); do
-                [ -f "$i/$1" ] && {
+                if [ -f "$i/$1" ]; then
                     printf '%s\n' "$i/$1"
                     break
-                }
+                fi
             done
         ;;
     esac
@@ -212,10 +214,10 @@ run_build_hook() {
             # shellcheck source=$hook_path
             . "$hook_path"
 
-            command -v build_hook >/dev/null 2>&1 && {
+            if command -v build_hook >/dev/null 2>&1; then
                 msg_info "running build_hook: $hook"
                 build_hook
-            }
+            fi
 
             printf '%s\n' "$hook" >> "$INITDIR/hook/hook.order"
             add_file "$hook_path" "hook/$hook" 755
@@ -289,10 +291,10 @@ EOF
 }
 
 need_arg() {
-    [ -z "$1" ] && {
+    if [ -z "$1" ]; then
         msg_error 'argument is needed for this option!'
         exit 1
-    }
+    fi
 }
 
 parse_opt() {
@@ -395,10 +397,10 @@ parse_opt() {
 main() {
     parse_opt "$@"
 
-    [ "$(id -u)" -ne 0 ] && {
+    if [ "$(id -u)" -ne 0 ]; then
         msg_error "need root access!"
         exit 1
-    }
+    fi
 
     CPIO=$(command -v bsdcpio || command -v cpio)
 
@@ -412,7 +414,7 @@ main() {
         exit 1
     }
 
-    # shellcheck source=$CONFIG
+    # shellcheck source=@SYSCONFDIR@/mkinitramfs.conf
     . "$CONFIG"
 
     [ -d "/lib/modules/$KERNEL" ] || {
