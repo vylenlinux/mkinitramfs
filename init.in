@@ -77,13 +77,13 @@ mount_root() {
 }
 
 run_hook() {
-    stage=$1
+    stage="$1"
 
     if [ -f /hook/hook.order ]; then
         case "$stage" in
             cleanup)
-                sed '1!G;h;$!d' /hook/hook.order > /hook/hook.orderreverse
-                mv /hook/hook.orderreverse /hook/hook.order
+                sed '1!G;h;$!d' /hook/hook.order > /hook/hook.order_reverse
+                mv /hook/hook.order_reverse /hook/hook.order
             ;;
         esac
 
@@ -96,7 +96,10 @@ run_hook() {
                 "run_${stage}_hook"
             fi
 
-            unset -f run_early_hook run_late_hook run_cleanup_hook build_hook
+            unset -f run_early_hook \
+                run_late_hook \
+                run_cleanup_hook \
+                build_hook
         done < /hook/hook.order
     fi
 
