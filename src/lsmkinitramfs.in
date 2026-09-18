@@ -6,7 +6,7 @@ msg_error() {
     printf 'ERROR: %s\n' "$1" >&2
 }
 
-[ -f "$CONFIG" ] || {
+[ -f "${CONFIG}" ] || {
     msg_error "config file '${CONFIG}' does not exist."
     exit 1
 }
