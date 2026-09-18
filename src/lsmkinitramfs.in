@@ -1,7 +1,28 @@
 #!/bin/sh -e
 
-[ -f @SYSCONFDIR@/mkinitramfs.conf ] && . @SYSCONFDIR@/mkinitramfs.conf
-[ "${1}" ] || exit 1
+CONFIG="@SYSCONFDIR@/mkinitramfs.conf"
+
+msg_error() {
+    printf 'ERROR: %s\n' "$1" >&2
+}
+
+[ -f "$CONFIG" ] || {
+    msg_error "config file '${CONFIG}' does not exist."
+    exit 1
+}
+
+# shellcheck source=@SYSCONFDIR@/mkinitramfs.conf
+. "${CONFIG}"
+
+if [ -z "${1}" ]; then
+    printf 'Usage: %s <initramfs>\n' "${0##*/}"
+    exit 1
+fi
+
+[ -f "${1}" ] || {
+    msg_error "initramfs '${1}' does not exist."
+    exit 1
+}
 
 case "${INITFSCOMP}" in
     lz4) compressor="lz4 -d -c" ;;
@@ -12,4 +33,3 @@ case "${INITFSCOMP}" in
 esac
 
 $compressor "${1}" | bsdcpio -it
-exit 0
