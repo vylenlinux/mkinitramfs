@@ -10,7 +10,7 @@ The file is read from \fI/etc/mkinitramfs.conf\fP by default; a different
 path may be specified with \fBmkinitramfs \-c\fP.
 .SH VARIABLES
 .TP
-\fBINITFSCOMP\fP
+\fBINIT_FS_COMP\fP
 Compression format for the output image.  Supported values:
 \fBgzip\fP (default), \fBxz\fP, \fBzstd\fP, \fBlz4\fP, \fBnone\fP.
 Can be overridden at runtime with \fBmkinitramfs \-C\fP.
@@ -43,7 +43,7 @@ Can be overridden at runtime with \fBmkinitramfs \-o\fP.
 .SH EXAMPLE
 .nf
 # Use gzip compression
-INITFSCOMP="gzip"
+INIT_FS_COMP="gzip"
 
 # No extra binaries, modules, or files by default
 BINARIES=""

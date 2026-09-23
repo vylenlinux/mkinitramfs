@@ -3,7 +3,7 @@
 CONFIG="@SYSCONFDIR@/mkinitramfs.conf"
 
 msg_error() {
-    printf 'ERROR: %s\n' "$1" >&2
+    printf 'ERROR: %s\n' "${1}" >&2
 }
 
 [ -f "${CONFIG}" ] || {
@@ -24,7 +24,7 @@ fi
     exit 1
 }
 
-case "${INITFSCOMP}" in
+case "${INIT_FS_COMP}" in
     lz4) compressor="lz4 -d -c" ;;
     cat) compressor="cat --" ;;
     xz) compressor="xzcat --" ;;
