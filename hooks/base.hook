@@ -1,7 +1,7 @@
 #!/bin/sh
 
 build_hook() {
-    for dir in dev run sys proc usr/bin usr/lib etc/modprobe.d etc/udev/rules.d; do
+    for dir in dev run sys proc usr/bin usr/lib usr/lib/firmware etc/modprobe.d etc/udev/rules.d; do
         add_dir "/${dir}"
     done
 
