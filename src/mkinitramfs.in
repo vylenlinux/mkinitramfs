@@ -180,7 +180,7 @@ finalize_modules() {
         add_file "$file"
     done
 
-    awk -F'/' '{printf "kernel/%s", $NF;}' "/usr/lib/modules/$KERNEL/modules.order" > "$INITDIR/usr/lib/modules/$KERNEL/modules.order"
+    awk -F'/' '{printf "kernel/%s\n", $NF;}' "/usr/lib/modules/$KERNEL/modules.order" > "$INITDIR/usr/lib/modules/$KERNEL/modules.order"
     depmod -b "$INITDIR" "$KERNEL"
 }
 
