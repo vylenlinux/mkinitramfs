@@ -26,7 +26,7 @@ fi
 
 case "${INIT_FS_COMP}" in
     lz4) compressor="lz4 -d -c" ;;
-    cat) compressor="cat --" ;;
+    cat | none) compressor="cat --" ;;
     xz) compressor="xzcat --" ;;
     zstd) compressor="zstd -d -c" ;;
     *) compressor="gzip -dc" ;;
