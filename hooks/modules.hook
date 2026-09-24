@@ -18,7 +18,7 @@ build_hook() {
         kernel/drivers/usb/storage"
 
     for mod in $REQMODULES; do
-        FTGT="${FTGT} /lib/modules/${KERNEL}/${mod}"
+        FTGT="${FTGT} /usr/lib/modules/${KERNEL}/${mod}"
     done
 
     # shellcheck disable=SC2044

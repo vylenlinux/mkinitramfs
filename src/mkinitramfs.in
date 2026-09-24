@@ -2,7 +2,7 @@
 
 # shellcheck disable=SC2317
 
-PATH=/bin:/usr/bin:/sbin:/usr/sbin
+PATH=/usr/bin
 
 msg_info() {
     [ "$QUIET" = 1 ] && return
@@ -60,19 +60,19 @@ add_module() {
     [ -z "$mod_name" ] && return 0
     [ -z "$mod_path" ] && return 0
 
-    if [ -f "$INITDIR/lib/modules/$KERNEL/kernel/${mod_path##*/}" ]; then
+    if [ -f "$INITDIR/usr/lib/modules/$KERNEL/kernel/${mod_path##*/}" ]; then
         return
     fi
 
-    add_file "$mod_path" "lib/modules/$KERNEL/kernel/${mod_path##*/}"
+    add_file "$mod_path" "usr/lib/modules/$KERNEL/kernel/${mod_path##*/}"
 
     modinfo -F firmware -k "$KERNEL" "$mod_name" | while read -r line; do
-        [ -f "/lib/firmware/$line" ] || {
+        [ -f "/usr/lib/firmware/$line" ] || {
             msg_warning "missing firmware for $mod_name: $line"
             break
         }
 
-        add_file "/lib/firmware/$line"
+        add_file "/usr/lib/firmware/$line"
     done
 
     for i in $(modinfo -F depends -k "$KERNEL" "$mod_name" | tr ',' ' '); do
@@ -174,13 +174,13 @@ add_symlink() {
 }
 
 finalize_modules() {
-    [ -d "$INITDIR/lib/modules/$KERNEL/kernel" ] || return
+    [ -d "$INITDIR/usr/lib/modules/$KERNEL/kernel" ] || return
 
-    for file in "/lib/modules/$KERNEL"/modules.*; do
+    for file in "/usr/lib/modules/$KERNEL"/modules.*; do
         add_file "$file"
     done
 
-    awk -F'/' '{print "kernel/" $NF;}' "/lib/modules/$KERNEL/modules.order" > "$INITDIR/lib/modules/$KERNEL/modules.order"
+    awk -F'/' '{printf "kernel/%s", $NF;}' "/usr/lib/modules/$KERNEL/modules.order" > "$INITDIR/usr/lib/modules/$KERNEL/modules.order"
     depmod -b "$INITDIR" "$KERNEL"
 }
 
@@ -417,8 +417,8 @@ main() {
     # shellcheck source=@SYSCONFDIR@/mkinitramfs.conf
     . "$CONFIG"
 
-    [ -d "/lib/modules/$KERNEL" ] || {
-        msg_error "kernel directory '/lib/modules/$KERNEL' does not exist."
+    [ -d "/usr/lib/modules/$KERNEL" ] || {
+        msg_error "kernel directory '/usr/lib/modules/$KERNEL' does not exist."
         exit 1
     }
 

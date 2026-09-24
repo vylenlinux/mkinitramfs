@@ -2,7 +2,7 @@
 
 # shellcheck disable=SC2154
 
-export PATH=/bin:/usr/bin:/sbin:/usr/sbin
+export PATH=/usr/bin
 
 shell() {
     setsid sh -c 'exec sh </dev/tty1 >/dev/tty1 2>&1'
@@ -107,7 +107,7 @@ run_hook() {
 }
 
 mount_handler=mount_root
-init=/sbin/init
+init=/usr/bin/init
 rootfstype=auto
 
 mount_setup
