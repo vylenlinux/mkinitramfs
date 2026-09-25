@@ -2,8 +2,7 @@
 .SH NAME
 mkinitramfs \- generate an initramfs image for Linux systems and LiveCDs
 .SH SYNOPSIS
-.B mkinitramfs
-[\fIoption\fR [\fIargument\fR]] ...
+.B mkinitramfs \fR[\fIoption\fR] [\fIargument\fR]
 .SH DESCRIPTION
 \fBmkinitramfs\fP generates an initial RAM filesystem (initramfs) image
 containing the files, kernel modules, and binaries needed to boot a Linux
@@ -23,7 +22,7 @@ Must be run as root.
 \fB\-k\fR \fIversion\fR
 Use a custom kernel version instead of the running kernel
 (default: output of \fBuname \-r\fP).
-The corresponding directory \fI/lib/modules/\fP\fIversion\fP must exist.
+The corresponding directory \fI/usr/lib/modules/\fP\fIversion\fP must exist.
 .TP
 \fB\-o\fR \fIoutput\fR
 Write the resulting image to \fIoutput\fR instead of the default
@@ -129,12 +128,15 @@ a file named \fIname\fP\fB.hook\fP.  Absolute paths may also be used directly
 \fBautomod\fP
 Auto-includes kernel modules for all currently loaded modules (reads
 \fI/sys/module/\fP).
+.TP
 \fBbase\fP
 Creates the essential directory layout (\fI/bin\fP, \fI/dev\fP, \fI/proc\fP,
 \fI/sys\fP, \fI/run\fP, \fI/usr\fP, \fI/etc\fP), standard symlinks
-(\fI/lib64\fP \(-> \fIlib\fP, \fI/sbin\fP \(-> \fIbin\fP, etc.), and core
-binaries (shell, mount, \fBswitch_root\fP, \fBmodprobe\fP, \fBblkid\fP, \fBsed\fP,
-\fBgrep\fP, \fBawk\fP, etc.).
+(\fI/bin\fP \(-> \fI/usr/bin\fP, \fI/sbin\fP \(-> \fI/usr/bin\fP,
+\fI/lib\fP \(-> \fI/usr/lib\fP, \fI/lib64\fP \(-> \fIlib\fP,
+\fI/usr/sbin\fP \(-> \fIbin\fP), and core binaries (shell, mount,
+\fBswitch_root\fP, \fBmodprobe\fP, \fBblkid\fP, \fBsed\fP, \fBgrep\fP,
+\fBawk\fP, etc.).
 .TP
 \fBencrypt\fP
 Adds LUKS encryption support: \fBcryptsetup\fP(8), \fBdmsetup\fP(8),
@@ -166,7 +168,7 @@ Default hook directory.
 \fI/tmp/mkinitramfs.\fP\fI$$\fP
 Temporary build directory, cleaned up on exit.
 .SH ENVIRONMENT
-The script sets \fBPATH\fP to \fI/bin:/usr/bin:/sbin:/usr/sbin\fP internally.
+The script sets \fBPATH\fP to \fI/usr/bin\fP internally.
 .SH EXIT STATUS
 .TP
 0
