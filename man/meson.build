@@ -1,12 +1,19 @@
-files = [
-    'lsmkinitramfs.1',
-    'mkinitramfs.8',
-    'mkinitramfs.conf.5'
-]
-
 if get_option('man')
-    foreach file: files
-        section = file.split('.')[-1]
-        install_data(file, install_dir: join_paths(get_option('mandir'), 'man' + section))
+    man_names = [
+        'lsmkinitramfs.1',
+        'mkinitramfs.8',
+        'mkinitramfs.conf.5'
+    ]
+
+    man_files = []
+
+    foreach man_name: man_names
+        man_files += configure_file(
+            input: '@0@.in'.format(man_name),
+            output: man_name,
+            configuration: conf_data
+        )
     endforeach
+
+    install_man(man_files)
 endif

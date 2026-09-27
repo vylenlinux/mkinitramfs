@@ -30,10 +30,10 @@ Write the resulting image to \fIoutput\fR instead of the default
 .TP
 \fB\-i\fR \fIinit\fR
 Use a custom init script instead of the default
-\fI/usr/share/mkinitramfs/init.in\fP.
+\fI@DATA_DIR@/init.in\fP.
 .TP
 \fB\-c\fR \fIconfig\fR
-Use a custom configuration file instead of \fI/etc/mkinitramfs.conf\fP.
+Use a custom configuration file instead of \fI@SYSCONFDIR@/mkinitramfs.conf\fP.
 .TP
 \fB\-C\fR \fIcompression\fR
 Compression format for the output image.  Supported values:
@@ -120,7 +120,7 @@ name of a function that mounts the root filesystem, replacing the
 default \fBmount_root\fP behavior (used by \fBliveiso\fP for overlayfs mounts).
 .SS Hook resolution
 A hook name is resolved by searching \fBHOOKDIRS\fP
-(default: \fI/usr/share/mkinitramfs/hooks\fP, colon-separated) for
+(default: \fI@HOOKS_DIR@\fP, colon-separated) for
 a file named \fIname\fP\fB.hook\fP.  Absolute paths may also be used directly
 (via \fB\-A\fP or \fB\-a\fP).
 .SS Standard hooks
@@ -154,15 +154,15 @@ Includes \fBudevd\fP(8) and \fBudevadm\fP(8), standard udev rules, and
 it during cleanup.
 .SH FILES
 .TP
-\fI/etc/mkinitramfs.conf\fP
+\fI@SYSCONFDIR@/mkinitramfs.conf\fP
 Default configuration file.  Defines compression format, default hooks,
 and optional extra binaries, modules, and files.  See
 \fBmkinitramfs.conf\fP(5).
 .TP
-\fI/usr/share/mkinitramfs/init.in\fP
+\fI@DATA_DIR@/init.in\fP
 Default init script placed at \fI/init\fP inside the image.
 .TP
-\fI/usr/share/mkinitramfs/hooks/\fP
+\fI@HOOKS_DIR@/\fP
 Default hook directory.
 .TP
 \fI/tmp/mkinitramfs.\fP\fI$$\fP

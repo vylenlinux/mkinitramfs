@@ -6,7 +6,7 @@ mkinitramfs.conf \- configuration file for mkinitramfs
 at the start of image generation.  It defines the default compression,
 hooks, and optional extra files, binaries, and kernel modules to include.
 .PP
-The file is read from \fI/etc/mkinitramfs.conf\fP by default; a different
+The file is read from \fI@SYSCONFDIR@/mkinitramfs.conf\fP by default; a different
 path may be specified with \fBmkinitramfs \-c\fP.
 .SH VARIABLES
 .TP
@@ -18,7 +18,7 @@ Can be overridden at runtime with \fBmkinitramfs \-C\fP.
 \fBHOOKS\fP
 Space-separated list of hooks to run, in order.  Each name resolves to a
 \&\fI.hook\fP file under \fBHOOKDIRS\fP (default:
-\&\fI/usr/share/mkinitramfs/hooks\fP).
+\&\fI@HOOKS_DIR@\fP).
 .br
 Example: \fBHOOKS="base modules udev"\fP
 .br

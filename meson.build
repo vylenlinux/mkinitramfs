@@ -4,7 +4,7 @@ PREFIX = get_option('prefix')
 SYSCONFDIR = join_paths(PREFIX, get_option('sysconfdir'))
 BINDIR = join_paths(PREFIX, get_option('bindir'))
 DATA_DIR = join_paths(PREFIX, get_option('data_dir'))
-HOOKS_DIR = join_paths(DATA_DIR, get_option('hooks_dir'))
+HOOKS_DIR = join_paths(DATA_DIR, 'hooks')
 
 conf_data = configuration_data()
 conf_data.set('SYSCONFDIR', SYSCONFDIR)
