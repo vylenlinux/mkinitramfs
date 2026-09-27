@@ -9,6 +9,7 @@ build_hook() {
     add_symlink /sbin usr/bin
     add_symlink /lib usr/lib
     add_symlink /lib64 lib
+    add_symlink /usr/lib64 lib
     add_symlink /usr/sbin bin
 
     for bin in bash sh cat mv cp killall ls mkdir mount find xargs grep fgrep umount sed sleep ln rm uname chroot chmod readlink basename modprobe blkid switch_root kmod lsmod insmod setsid awk; do
