@@ -13,7 +13,7 @@ conf_data.set('HOOKS_DIR', HOOKS_DIR)
 
 subdir('data')
 subdir('hooks')
-subdir('src')
 subdir('man')
+subdir('src')
 
 install_data('init.in', install_dir: DATA_DIR, install_mode: 'rw-r--r--')
