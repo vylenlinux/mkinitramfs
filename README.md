@@ -1,2 +1,2 @@
 ## mkinitramfs
-Script to create initramfs image for linux system and livecd
+Script to create initramfs image for linux system
