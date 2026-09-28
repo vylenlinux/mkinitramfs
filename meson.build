@@ -3,7 +3,7 @@ project('mkinitramfs', 'c', version: '20260515')
 PREFIX = get_option('prefix')
 SYSCONFDIR = join_paths(PREFIX, get_option('sysconfdir'))
 BINDIR = join_paths(PREFIX, get_option('bindir'))
-DATA_DIR = join_paths(PREFIX, get_option('data_dir'))
+DATA_DIR = join_paths(PREFIX, get_option('data-dir'))
 HOOKS_DIR = join_paths(DATA_DIR, 'hooks')
 
 conf_data = configuration_data()
