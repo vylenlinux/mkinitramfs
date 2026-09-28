@@ -1,4 +1,4 @@
-project('mkinitramfs', 'c', version: '20260515')
+project('mkinitramfs', 'c', version: '20260928')
 
 PREFIX = get_option('prefix')
 SYSCONFDIR = join_paths(PREFIX, get_option('sysconfdir'))
