@@ -7,14 +7,14 @@ build_hook() {
     add_file /usr/lib/udev/rules.d/64-btrfs.rules
     add_file /usr/lib/udev/rules.d/80-drivers.rules
 
-    add_binary udevd
+    add_binary /usr/lib/systemd/systemd-udevd
     add_binary udevadm
     add_binary /usr/lib/udev/ata_id
     add_binary /usr/lib/udev/scsi_id
 }
 
 run_early_hook() {
-    udevd --daemon --resolve-names=never
+    /usr/lib/systemd/systemd-udevd --daemon --resolve-names=never
 
     udevadm trigger --action=add --type=subsystems
     udevadm trigger --action=add --type=devices
