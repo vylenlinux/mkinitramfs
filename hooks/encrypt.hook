@@ -31,7 +31,7 @@ run_early_hook() {
     while [ "$TRIES" -lt 3 ] && [ "$SUCCESS" -eq 0 ]; do
         printf 'Enter passphrase for %s: ' "$device"
 
-        stty_orig="$(stty -F "${CONSOLE}" -g)"
+        stty_orig="$(stty -F $CONSOLE -g)"
         stty -F "${CONSOLE}" -echo
 
         read -r input_variable <> "${CONSOLE}"
