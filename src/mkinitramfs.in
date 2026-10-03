@@ -1,8 +1,7 @@
 #!/bin/sh
 
 # shellcheck disable=SC2317
-
-PATH=/usr/bin
+export PATH=/usr/bin
 
 msg_info() {
     [ "$QUIET" = 1 ] && return
@@ -83,7 +82,7 @@ add_module() {
 }
 
 add_file() {
-    [ "$1" ] || return
+    [ -n "$1" ] || return
     src="$1"
 
     case "$src" in
@@ -153,7 +152,7 @@ add_symlink() {
     name="$1"
     target="$2"
 
-    [ "$name" ] || return 1
+    [ -n "$name" ] || return 1
 
     if [ -z "$target" ]; then
         target=$(readlink -f "$name")
@@ -260,7 +259,7 @@ add_compression() {
 }
 
 cleanup() {
-    rm -fr "$INITDIR"
+    rm -rf "$INITDIR"
 }
 
 interrupted() {
