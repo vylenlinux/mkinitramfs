@@ -91,7 +91,7 @@ run_hook() {
             # shellcheck source=/hook/$line
             . "/hook/${line}"
 
-            if [ "$(command -v "run_${stage}_hook")" ]; then
+            if command -v "run_${stage}_hook" >/dev/null 2>&1; then
                 msg_info "running ${stage}_hook: ${line}"
                 "run_${stage}_hook"
             fi
