@@ -1,2 +1,1 @@
-option('data-dir', type: 'string',  value: '/usr/share/mkinitramfs')
-option('man',      type: 'boolean', value: true)
+option('man', type: 'boolean', value: true)
